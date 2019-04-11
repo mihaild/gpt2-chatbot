@@ -84,5 +84,5 @@ class DummyModel:
         pass
 
     def generate(self, text):
-        logger.warning(f"Input text: {text}")
+        logger.info(f"Input text: {text}")
         return f"Generated <>& {text}"
