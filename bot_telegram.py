@@ -13,7 +13,8 @@ import regexps
 
 logger = logging.getLogger(__name__)
 
-OK_RE = re.compile(f'^(?:клиппи|клипи|clippy) ({regexps.CORRECT_INPUT_RE})', re.I)
+GROUP_RE = re.compile(f'^(?:клиппи|клипи|clippy) ({regexps.CORRECT_INPUT_RE})', re.I)
+PRIVATE_RE = re.compile(f'^({regexps.CORRECT_INPUT_RE})')
 
 
 class HttpModel:
@@ -33,21 +34,31 @@ class ClippyHandler:
         self.ok_chats = ok_chats
 
     def __call__(self, bot, update):
+        is_private = update.message.chat.type == 'private'
         if self.ok_chats and update.message.chat.id not in self.ok_chats:
-            logger.info(f"Message {update.message.text} in bad chat {update.message.chat.id}")
-            bot.send_message(chat_id=update.message.chat_id, text="Меня здесь быть не должно.")
-            if update.message.chat.type != 'private':
+            logger.info("Message %s in bad chat %d", update.message.text, update.message.chat.id)
+            bot.send_message(chat_id=update.message.chat_id, text="I don't belong here.")
+            if not is_private:
                 bot.leave_chat(chat_id=update.message.chat_id)
             return
-        m = OK_RE.match(update.message.text)
-        if m is None:
+
+        if is_private:
+            r = PRIVATE_RE
+        else:
+            r = GROUP_RE
+        m = r.match(update.message.text)
+
+        if not m:
+            if is_private:
+                logger.info("Bad input from %s", update.message.chat.username)
+                bot.send_message(chat_id=update.message.chat_id, text="Too long or too short message, or bad symbols in messasge")
             return
-        logger.info(f"Text {m.group(1)} in chat {update.message.chat.id}")
+
         text = m.group(1)
+        logger.info("Text %s in chat %s %d", text, update.message.chat.type, update.message.chat.id)
         bot.send_chat_action(chat_id=update.message.chat_id, action=telegram.ChatAction.TYPING)
         resp_text = self.model.generate(text)
-        n = '\n'
-        logger.info(f"Response {resp_text.replace(n, ' ')}")
+        logger.info("Response %s", resp_text.replace('\n', ' '))
         bot.send_message(chat_id=update.message.chat_id, text=resp_text)
 
 
