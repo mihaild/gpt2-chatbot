@@ -9,10 +9,11 @@ import telegram.ext
 import telegram
 
 import models
+import regexps
 
 logger = logging.getLogger(__name__)
 
-OK_RE = re.compile(r'^(?:клиппи|клипи|clippy) ([\w\.`~!@#$%^&*()\-+=:;\'",./\\№<> ?]{3,150})$', re.I)
+OK_RE = re.compile(f'^(?:клиппи|клипи|clippy) ({regexps.CORRECT_INPUT_RE})', re.I)
 
 
 class HttpModel:
